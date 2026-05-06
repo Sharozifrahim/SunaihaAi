@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SunaihaScriptureAi | Biblical Intelligence</title>
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #020617;
+            color: #f8fafc;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Glassmorphism Header */
+        .glass-header {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #chatDisplay {
+            flex: 1;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        /* Message Animations */
+        .message-wrapper {
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-bubble {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            color: white;
+            padding: 1rem 1.25rem;
+            border-radius: 24px 24px 4px 24px;
+            max-width: 80%;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+        }
+
+        .ai-bubble {
+            align-self: flex-start;
+            background: #1e293b;
+            color: #cbd5e1;
+            padding: 1.25rem;
+            border-radius: 24px 24px 24px 4px;
+            max-width: 85%;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Markdown Scholar Style */
+        .markdown-body h2 { color: #a855f7; font-weight: 800; margin: 1rem 0 0.5rem; }
+        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.7; font-size: 0.95rem; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; border-radius: 8px; overflow: hidden; }
+        .markdown-body th { background: rgba(99, 102, 241, 0.2); color: #818cf8; padding: 12px; text-align: left; }
+        .markdown-body td { border-bottom: 1px solid #334155; padding: 10px; background: rgba(255,255,255,0.02); }
+
+        /* Scrollbar */
+        #chatDisplay::-webkit-scrollbar { width: 4px; }
+        #chatDisplay::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        /* Mic Pulse */
+        .mic-active { color: #ef4444 !important; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.2; } 100% { scale: 1; } }
+    </style>
+</head>
+<body>
+
+    <!-- Top App Bar -->
+    <header class="glass-header px-6 py-4 flex justify-between items-center z-50">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/40">
+                <i class="fas fa-bible text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-extrabold tracking-tight">Sunaiha<span class="text-indigo-400">ScriptureAi</span></h1>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Advanced Biblical Engine</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <a href="https://facebook.com/sunaiha.sabir" target="_blank" class="text-slate-400 hover:text-blue-500 transition">
+                <i class="fab fa-facebook text-xl"></i>
+            </a>
+            <button onclick="clearChat()" class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition flex items-center justify-center">
+                <i class="fas fa-trash-can"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Chat Display -->
+    <main id="chatDisplay" class="p-4 md:p-12 space-y-2"></main>
+
+    <!-- Typing Loader -->
+    <div id="loader" class="hidden px-12 py-4 text-xs text-indigo-400 font-bold flex items-center gap-3">
+        <div class="flex gap-1">
+            <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce"></div>
+            <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.2s]"></div>
+            <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.4s]"></div>
+        </div>
+        Deepening the study...
+    </div>
+
+    <!-- Input Area -->
+    <footer class="p-6 bg-slate-950/90 border-t border-white/5">
+        <div class="max-w-4xl mx-auto flex items-center gap-3 glass-header rounded-3xl p-2 shadow-2xl">
+            <button id="micBtn" onclick="toggleVoice()" class="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-indigo-400 transition">
+                <i class="fas fa-microphone-lines text-xl"></i>
+            </button>
+            
+            <input id="userIn" type="text" 
+                   placeholder="Ask for 100 verses, compare prophets, or seek wisdom..." 
+                   class="flex-1 bg-transparent border-none focus:ring-0 text-white p-3 placeholder-slate-500">
+            
+            <button onclick="sendPrompt()" class="w-12 h-12 bg-indigo-600 hover:bg-indigo-500 rounded-2xl flex items-center justify-center transition shadow-lg shadow-indigo-600/30">
+                <i class="fas fa-paper-plane text-white"></i>
+            </button>
+        </div>
+        <div class="text-center mt-4">
+            <span class="text-[9px] text-slate-600 font-bold uppercase tracking-[0.2em]">Crafted by Sunaiha Sabir</span>
+        </div>
+    </footer>
+
+    <script>
+        const chatDisplay = document.getElementById('chatDisplay');
+        const userIn = document.getElementById('userIn');
+        const loader = document.getElementById('loader');
+        const micBtn = document.getElementById('micBtn');
+
+        let chatLog = []; // Local history for Node.js API context
+
+        // Initial Assistant Message
+        window.addEventListener('DOMContentLoaded', () => {
+            addBubble('assistant', "🙏 Welcome to **SunaihaScriptureAi**. \n\nHow can I assist your biblical journey today? I can provide extensive verse lists, compare the lives of Prophets, or translate wisdom into any language.");
+        });
+
+        async function sendPrompt(forcedText = null) {
+            const text = forcedText || userIn.value.trim();
+            if (!text) return;
+
+            // Update UI
+            if (!forcedText) addBubble('user', text);
+            userIn.value = '';
+            loader.classList.remove('hidden');
+
+            try {
+                // IMPORTANT: This calls YOUR Node.js server endpoint
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        messages: [
+                            { 
+                                role: "system", 
+                                content: "You are SunaihaScriptureAi, a professional Biblical Scholar. Provide deep insights with emojis. If a user asks for 'more' or '100 items', provide a rich list and always finish the message with: [ENABLE_LOAD_MORE]" 
+                            },
+                            ...chatLog, 
+                            { role: 'user', content: text }
+                        ] 
+                    })
+                });
+
+                const data = await response.json();
+                const aiResult = data.choices[0].message.content;
+
+                loader.classList.add('hidden');
+                addBubble('assistant', aiResult);
+
+                // Manage History Context
+                chatLog.push({ role: 'user', content: text }, { role: 'assistant', content: aiResult });
+                if(chatLog.length > 8) chatLog.shift(); // Keep last 8 messages to stay within token limits
+
+            } catch (err) {
+                loader.classList.add('hidden');
+                addBubble('assistant', "⚠️ **Connection Offline:** I cannot reach the scripture archives right now. Please check your Node.js server.");
+            }
+        }
+
+        function addBubble(role, content) {
+            const wrapper = document.createElement('div');
+            wrapper.className = "message-wrapper";
+
+            let cleanContent = content;
+            let showLoadMore = false;
+
+            if (content.includes("[ENABLE_LOAD_MORE]")) {
+                cleanContent = content.replace("[ENABLE_LOAD_MORE]", "");
+                showLoadMore = true;
+            }
+
+            const bubble = document.createElement('div');
+            bubble.className = role === 'user' ? 'user-bubble' : 'ai-bubble';
+
+            bubble.innerHTML = `
+                <div class="markdown-body">${marked.parse(cleanContent)}</div>
+                ${showLoadMore ? `
+                    <div class="mt-4 pt-4 border-t border-indigo-500/20">
+                        <button onclick="sendPrompt('Provide more deep verses and additional information on this same topic.')" 
+                                class="w-full py-3 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 rounded-2xl border border-indigo-500/20 font-extrabold transition text-xs uppercase tracking-widest">
+                            <i class="fas fa-book-open mr-2"></i> Load More Wisdom
+                        </button>
+                    </div>
+                ` : ''}
+                ${role === 'assistant' ? `
+                    <div class="mt-3 pt-2 border-t border-white/5 flex gap-4">
+                        <button onclick="narrateText(\`${cleanContent.replace(/[`']/g, "")}\`)" class="text-[10px] font-bold text-slate-500 hover:text-indigo-400 uppercase">
+                            <i class="fas fa-volume-high"></i> Listen
+                        </button>
+                    </div>
+                ` : ''}
+            `;
+
+            wrapper.appendChild(bubble);
+            chatDisplay.appendChild(wrapper);
+            chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        }
+
+        // Voice Input (STT)
+        function toggleVoice() {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRec) return alert("Speech recognition not supported in your browser.");
+            
+            const rec = new SpeechRec();
+            rec.onstart = () => micBtn.classList.add('mic-active');
+            rec.onend = () => micBtn.classList.remove('mic-active');
+            rec.onresult = (e) => {
+                userIn.value = e.results[0][0].transcript;
+                sendPrompt();
+            };
+            rec.start();
+        }
+
+        // Voice Output (TTS)
+        function narrateText(text) {
+            window.speechSynthesis.cancel();
+            const msg = new SpeechSynthesisUtterance(text.replace(/[#*`]/g, ''));
+            msg.rate = 0.9;
+            window.speechSynthesis.speak(msg);
+        }
+
+        // Clear App Data
+        function clearChat() {
+            if(confirm("Erase all study history?")) {
+                chatDisplay.innerHTML = '';
+                chatLog = [];
+                addBubble('assistant', "Study history cleared. How can I assist you now?");
+            }
+        }
+
+        // Key Binding
+        userIn.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendPrompt(); });
+    </script>
+</body>
+</html>
