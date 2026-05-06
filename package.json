@@ -2,6 +2,9 @@
   "name": "sunaiha-scripture-ai",
   "version": "1.0.0",
   "main": "index.js",
+  "scripts": {
+    "start": "npm i && node index.js"
+  },
 
   "keywords": [],
   "author": "",
